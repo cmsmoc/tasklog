@@ -180,6 +180,43 @@
         .item-actions .btn-del:hover { color: #dc2626; }
 
         /* ==========================================================================
+           4.1. VISÃO SIMPLIFICADA (COMPACT/MINIMAL VIEW)
+           ========================================================================== */
+        .list-item.compact {
+            flex-direction: row;
+            align-items: center;
+            padding: 0.5rem 0.25rem;
+            border: none;
+            border-bottom: 1px solid var(--cms-gray);
+            gap: 0.75rem;
+            cursor: pointer;
+        }
+        .list-item.compact:hover { background: var(--cms-offwhite); }
+        .list-item.compact .item-header { display: none; }
+        .list-item.compact .item-text { 
+            font-size: 12px; 
+            font-weight: 500; 
+            flex: 1; 
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
+            text-decoration: none;
+        }
+        .list-item.compact.status-done .item-text { text-decoration: line-through; opacity: 0.6; }
+        .list-item.compact .item-actions { display: none; }
+        
+        .compact-date { font-family: var(--font-heading); font-size: 10px; font-weight: 700; color: var(--cms-navy); min-width: 60px; }
+        .compact-check { 
+            width: 14px; height: 14px; 
+            border: 1px solid var(--cms-ink); 
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .compact-check.done { background: var(--cms-verde); border-color: var(--cms-verde); color: var(--cms-branco); font-size: 9px; }
+        .compact-pri { width: 6px; height: 14px; background: var(--cms-amarelo); flex-shrink: 0; }
+        .compact-log-icon { width: 6px; height: 14px; background: var(--cms-ink); flex-shrink: 0; }
+
+        /* ==========================================================================
            5. KANBAN BOARD
            ========================================================================== */
         .kanban-board { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; align-items: flex-start; }
@@ -297,6 +334,7 @@
             <!-- ABA: TASKS -->
             <section id="view-task" class="view-panel active">
                 <div class="filter-bar">
+                    <button class="filter-btn" id="btn-toggle-view" onclick="toggleViewMode()">Visão: Detalhada</button>
                     <button class="filter-btn active" id="btn-sort-date" onclick="toggleSortDate()">Data: ↓ (Recente)</button>
                     <button class="filter-btn" id="btn-sort-pri" onclick="togglePriority()">Prioridade Primeiro</button>
                     <button class="filter-btn" id="btn-hide-done" onclick="toggleHideDone()">Ocultar Concluídas</button>
@@ -306,7 +344,10 @@
 
             <!-- ABA: LOG -->
             <section id="view-log" class="view-panel">
-                <h2 class="cms-heading" style="margin-bottom: 1rem;">Registro Histórico</h2>
+                <div class="filter-bar" style="justify-content: space-between; align-items: center;">
+    <h2 class="cms-heading" style="font-size: 14px; margin:0;">Registro Histórico</h2>
+    <button class="filter-btn" id="btn-toggle-view-log" onclick="toggleViewMode()" style="flex: 0 0 auto; padding: 0.25rem 0.5rem;">Visão: Detalhada</button>
+</div>
                 <div class="item-list" id="log-list"></div>
             </section>
 
@@ -422,6 +463,8 @@
         let filterSortDesc = true;
         let filterPriorityFirst = false;
         let filterHideDone = false;
+        
+        let isCompactView = true; // Começamos com a visão produtiva por padrão
 
         let currentDate = new Date();
         let currentMonth = currentDate.getMonth();
@@ -660,6 +703,19 @@
             renderCalendar();
         }
 
+        function toggleViewMode() {
+    isCompactView = !isCompactView;
+    const label = isCompactView ? 'Visão: Simples' : 'Visão: Detalhada';
+    
+    const btnTask = document.getElementById('btn-toggle-view');
+    if(btnTask) btnTask.innerText = label;
+    
+    const btnLog = document.getElementById('btn-toggle-view-log');
+    if(btnLog) btnLog.innerText = label;
+    
+    renderAll();
+}
+
 
         /* ==========================================================================
            6. RENDERIZAÇÃO DOM (APENAS LEITURA DE MEMÓRIA)
@@ -699,24 +755,41 @@
 
             tasks.forEach(t => {
                 const item = document.createElement('div');
-                item.className = `list-item ${t.priority === 'Alta' ? 'priority-alta' : ''} ${t.status === 'done' ? 'status-done' : ''}`;
                 
-                let badges = '';
-                if(t.category) badges += `<span class="badge badge-cat">${t.category}</span>`;
-                if(t.priority === 'Alta') badges += `<span class="badge badge-pri">PRIORIDADE ALTA</span>`;
+                if (isCompactView) {
+                    // RENDEREIZAÇÃO ULTRASIMPLIFICADA
+                    item.className = `list-item compact ${t.status === 'done' ? 'status-done' : ''}`;
+                    let priIndicator = t.priority === 'Alta' ? `<div class="compact-pri"></div>` : '';
+                    let checkClass = t.status === 'done' ? 'compact-check done' : 'compact-check';
+                    let checkIcon = t.status === 'done' ? '✔' : '';
+                    let toggleStatus = t.status === 'done' ? 'todo' : 'done';
+                    
+                    item.innerHTML = `
+                        <div class="${checkClass}" onclick="updateStatus(${t.id}, '${toggleStatus}')">${checkIcon}</div>
+                        <div class="compact-date">${formatDateBr(t.date).substring(0,5)}</div>
+                        ${priIndicator}
+                        <div class="item-text" onclick="editEntry(${t.id})" title="${t.text}">${t.text}</div>
+                    `;
+                } else {
+                    // RENDERIZAÇÃO DETALHADA (SEU CÓDIGO ORIGINAL)
+                    item.className = `list-item ${t.priority === 'Alta' ? 'priority-alta' : ''} ${t.status === 'done' ? 'status-done' : ''}`;
+                    let badges = '';
+                    if(t.category) badges += `<span class="badge badge-cat">${t.category}</span>`;
+                    if(t.priority === 'Alta') badges += `<span class="badge badge-pri">PRIORIDADE ALTA</span>`;
 
-                item.innerHTML = `
-                    <div class="item-header">
-                        <span class="item-date">${formatDateBr(t.date)}</span>
-                        <div class="badges">${badges}</div>
-                    </div>
-                    <div class="item-text">${t.text}</div>
-                    <div class="item-actions">
-                        ${t.status !== 'done' ? `<button onclick="updateStatus(${t.id}, 'done')">✔ Concluir</button>` : `<button onclick="updateStatus(${t.id}, 'todo')">Reabrir</button>`}
-                        <button onclick="editEntry(${t.id})">Editar</button>
-                        <button class="btn-del" onclick="deleteEntry(${t.id})">Excluir</button>
-                    </div>
-                `;
+                    item.innerHTML = `
+                        <div class="item-header">
+                            <span class="item-date">${formatDateBr(t.date)}</span>
+                            <div class="badges">${badges}</div>
+                        </div>
+                        <div class="item-text">${t.text}</div>
+                        <div class="item-actions">
+                            ${t.status !== 'done' ? `<button onclick="updateStatus(${t.id}, 'done')">✔ Concluir</button>` : `<button onclick="updateStatus(${t.id}, 'todo')">Reabrir</button>`}
+                            <button onclick="editEntry(${t.id})">Editar</button>
+                            <button class="btn-del" onclick="deleteEntry(${t.id})">Excluir</button>
+                        </div>
+                    `;
+                }
                 container.appendChild(item);
             });
         }
@@ -729,19 +802,31 @@
 
             logs.forEach(l => {
                 const item = document.createElement('div');
-                item.className = `list-item type-log`;
-                let badges = l.category ? `<span class="badge badge-cat">${l.category}</span>` : '';
-                item.innerHTML = `
-                    <div class="item-header">
-                        <span class="item-date">${formatDateBr(l.date)}</span>
-                        <div class="badges">${badges}</div>
-                    </div>
-                    <div class="item-text">${l.text}</div>
-                    <div class="item-actions">
-                        <button onclick="editEntry(${l.id})">Editar</button>
-                        <button class="btn-del" onclick="deleteEntry(${l.id})">Excluir</button>
-                    </div>
-                `;
+                
+                if (isCompactView) {
+                     // RENDERIZAÇÃO ULTRASIMPLIFICADA
+                     item.className = `list-item compact type-log`;
+                     item.innerHTML = `
+                        <div class="compact-log-icon"></div>
+                        <div class="compact-date">${formatDateBr(l.date).substring(0,5)}</div>
+                        <div class="item-text" onclick="editEntry(${l.id})" title="${l.text}">${l.text}</div>
+                     `;
+                } else {
+                    // RENDERIZAÇÃO DETALHADA (SEU CÓDIGO ORIGINAL)
+                    item.className = `list-item type-log`;
+                    let badges = l.category ? `<span class="badge badge-cat">${l.category}</span>` : '';
+                    item.innerHTML = `
+                        <div class="item-header">
+                            <span class="item-date">${formatDateBr(l.date)}</span>
+                            <div class="badges">${badges}</div>
+                        </div>
+                        <div class="item-text">${l.text}</div>
+                        <div class="item-actions">
+                            <button onclick="editEntry(${l.id})">Editar</button>
+                            <button class="btn-del" onclick="deleteEntry(${l.id})">Excluir</button>
+                        </div>
+                    `;
+                }
                 container.appendChild(item);
             });
         }

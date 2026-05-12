@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CMSMOC - PWA Organizer</title>
+    
+    <!-- Tipografia Oficial -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="icon" href="https://cmsmoc.github.io/secretariaexecutiva/logo/iconcms512.png">
+
+    <style>
+        /* ==========================================================================
+           1. VARIÁVEIS OFICIAIS (DESIGN SYSTEM)
+           ========================================================================== */
+        :root {
+            --cms-navy: #0D2E5A;
+            --cms-azul: #1B6CB5;
+            --cms-verde: #1E8A4A;
+            --cms-amarelo: #F5C400;
+            --cms-branco: #FFFFFF;
+            --cms-offwhite: #F7F8FA;
+            --cms-ink: #111827;
+            --cms-gray: #E5E7EB;
+            
+            --font-hero: 'Montserrat', sans-serif;
+            --font-heading: 'Montserrat', sans-serif;
+            --font-body: 'Open Sans', sans-serif;
+        }
+
+        /* ==========================================================================
+           2. RESET E BASE (MOBILE PWA & BAUHAUS)
+           ========================================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            border-radius: 0 !important; /* Strict Bauhaus - Sem bordas arredondadas */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--cms-ink);
+            background-color: var(--cms-gray); /* Fundo externo da tela */
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        ul { list-style: none; }
+        button, input, select, textarea { font-family: inherit; border: none; outline: none; background: none; }
+        button { cursor: pointer; }
+
+        /* Tipografia */
+        .cms-hero { font-family: var(--font-hero); font-weight: 900; font-size: 1.5rem; letter-spacing: -1px; text-transform: uppercase; }
+        .cms-heading { font-family: var(--font-heading); font-weight: 700; font-size: 1.2rem; }
+        .cms-eyebrow { font-family: var(--font-heading); font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; }
+        
+        /* ==========================================================================
+           3. ESTRUTURA DO APP PWA
+           ========================================================================== */
+        .app-container {
+            background-color: var(--cms-branco);
+            width: 100%;
+            max-width: 500px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+
+        .app-header {
+            padding: 2rem 1.5rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--cms-gray);
+            background: var(--cms-branco);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo-mobile { max-width: 180px; margin: 0 auto 1rem; display: block; }
+
+        /* Navegação em Abas (Scroll horizontal para telas pequenas) */
+        .app-nav {
+            display: flex;
+            overflow-x: auto;
+            border-bottom: 2px solid var(--cms-gray);
+            background: var(--cms-branco);
+            scrollbar-width: none; /* Oculta scrollbar no firefox */
+        }
+        .app-nav::-webkit-scrollbar { display: none; } /* Oculta scrollbar no chrome */
+        
+        .tab-btn {
+            flex: 1;
+            min-width: 90px;
+            padding: 1rem 0.5rem;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 11px;
+            color: var(--cms-ink);
+            opacity: 0.5;
+            border-bottom: 4px solid transparent;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .tab-btn.active { opacity: 1; border-bottom-color: var(--cms-azul); color: var(--cms-azul); }
+
+        .app-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            padding-bottom: 100px; /* Espaço para o FAB */
+            background: var(--cms-offwhite);
+        }
+
+        .view-panel { display: none; animation: fadeIn 0.3s ease; }
+        .view-panel.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ==========================================================================
+           4. COMPONENTES VISUAIS (FILTROS, LISTAS, TAGS)
+           ========================================================================== */
+        
+        /* Barra de Filtros */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: var(--cms-branco);
+            padding: 0.75rem;
+            border: 1px solid var(--cms-gray);
+        }
+        .filter-btn {
+            font-size: 10px; font-weight: 700; font-family: var(--font-heading);
+            padding: 0.5rem; border: 1px solid var(--cms-gray); color: var(--cms-ink);
+            text-transform: uppercase; flex: 1; text-align: center;
+        }
+        .filter-btn.active { background: var(--cms-navy); color: var(--cms-branco); border-color: var(--cms-navy); }
+
+        /* Lista de Itens */
+        .item-list { display: flex; flex-direction: column; gap: 0.75rem; }
+        .list-item {
+            background: var(--cms-branco);
+            border: 1px solid var(--cms-gray);
+            border-left: 4px solid var(--cms-azul);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .list-item.priority-alta { border-left-color: var(--cms-amarelo); }
+        .list-item.status-done { border-left-color: var(--cms-verde); opacity: 0.7; }
+        .list-item.type-log { border-left-color: var(--cms-ink); }
+
+        .item-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .item-date { font-family: var(--font-heading); font-size: 10px; font-weight: 700; color: var(--cms-navy); }
+        
+        .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .badge {
+            font-size: 9px; font-weight: 700; font-family: var(--font-heading);
+            padding: 2px 6px; text-transform: uppercase; color: var(--cms-branco);
+        }
+        .badge-cat { background: var(--cms-ink); }
+        .badge-pri { background: var(--cms-amarelo); color: var(--cms-ink); }
+        
+        .item-text { font-size: 14px; font-weight: 600; line-height: 1.4; }
+        .status-done .item-text { text-decoration: line-through; }
+
+        .item-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 0.5rem; border-top: 1px solid var(--cms-gray); padding-top: 0.5rem; }
+        .item-actions button { font-size: 10px; font-weight: 700; font-family: var(--font-heading); text-transform: uppercase; color: var(--cms-ink); opacity: 0.6; }
+        .item-actions button:hover { opacity: 1; color: var(--cms-azul); }
+        .item-actions .btn-del:hover { color: #dc2626; }
+
+        /* ==========================================================================
+           5. KANBAN BOARD
+           ========================================================================== */
+        .kanban-board { display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 1rem; align-items: flex-start; }
+        .kanban-col {
+            min-width: 260px;
+            background: var(--cms-gray);
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            border-top: 4px solid var(--cms-navy);
+        }
+        .kanban-col[data-status="doing"] { border-top-color: var(--cms-amarelo); }
+        .kanban-col[data-status="done"] { border-top-color: var(--cms-verde); }
+        .kanban-col-title { font-family: var(--font-heading); font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; }
+        
+        .kanban-card { background: var(--cms-branco); padding: 0.75rem; border: 1px solid var(--cms-gray); cursor: grab; }
+        .kanban-card:active { cursor: grabbing; }
+        .kanban-card-text { font-size: 13px; font-weight: 600; margin-bottom: 0.5rem; }
+        .kanban-mobile-controls { display: flex; justify-content: space-between; margin-top: 0.5rem; border-top: 1px solid var(--cms-gray); padding-top: 0.5rem;}
+        .kanban-mobile-controls button { background: var(--cms-gray); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+
+        /* ==========================================================================
+           6. CALENDÁRIO MENSAL
+           ========================================================================== */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: var(--cms-gray); border: 1px solid var(--cms-gray); }
+        .cal-day-name { background: var(--cms-navy); color: var(--cms-branco); text-align: center; font-size: 10px; font-weight: 700; padding: 0.5rem 0; text-transform: uppercase; }
+        .cal-cell { background: var(--cms-branco); min-height: 80px; padding: 0.25rem; display: flex; flex-direction: column; }
+        .cal-cell.empty { background: var(--cms-offwhite); }
+        .cal-date { font-size: 12px; font-weight: 700; margin-bottom: 4px; color: var(--cms-ink); }
+        .cal-indicators { display: flex; flex-direction: column; gap: 2px; }
+        .cal-dot { font-size: 9px; padding: 2px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-heading); font-weight: 700;}
+        .cal-dot.t-task { background: var(--cms-azul); }
+        .cal-dot.t-log { background: var(--cms-ink); }
+
+        /* ==========================================================================
+           7. FAB E MODAL (ADICIONAR/EDITAR)
+           ========================================================================== */
+        .fab {
+            position: absolute;
+            bottom: 2rem;
+            right: 1.5rem;
+            width: 56px;
+            height: 56px;
+            background: var(--cms-navy);
+            color: var(--cms-branco);
+            font-size: 2rem;
+            font-weight: 400;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 50;
+            transition: transform 0.2s;
+        }
+        .fab:active { transform: scale(0.95); background: var(--cms-azul); }
+
+        .modal-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(17, 24, 39, 0.9);
+            display: none; justify-content: center; align-items: center;
+            z-index: 100; padding: 1.5rem;
+        }
+        .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+        
+        .modal-box {
+            background: var(--cms-branco);
+            width: 100%;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .form-group label { font-family: var(--font-heading); font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--cms-navy); }
+        .form-control { border: 1px solid var(--cms-ink); padding: 0.75rem; font-size: 14px; width: 100%; background: var(--cms-offwhite); }
+        textarea.form-control { resize: none; min-height: 80px; }
+        
+        .modal-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+        .btn-primary { background: var(--cms-verde); color: var(--cms-branco); padding: 1rem; flex: 2; font-family: var(--font-heading); font-weight: 700; text-transform: uppercase; }
+        .btn-secondary { background: var(--cms-gray); color: var(--cms-ink); padding: 1rem; flex: 1; font-family: var(--font-heading); font-weight: 700; text-transform: uppercase; }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <!-- PWA SYNC INDICATOR -->
+            <div id="sync-status" style="position: absolute; top: 1.5rem; right: 1.5rem; font-family: var(--font-heading); font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--cms-verde); display: flex; align-items: center; gap: 6px;">
+                <span id="sync-dot" style="width: 8px; height: 8px; background: var(--cms-verde); border-radius: 50%; display: inline-block;"></span>
+                <span id="sync-text">Online</span>
+            </div>
+
+            <img src="https://cmsmoc.github.io/secretariaexecutiva/logo/secexe5.png" alt="Logo Sec Executiva" class="logo-mobile">
+            <div class="cms-eyebrow">Plataforma de Gestão</div>
+            <h1 class="cms-hero">Organizer</h1>
+        </header>
+
+        <!-- NAVEGAÇÃO -->
+        <nav class="app-nav">
+            <button class="tab-btn active" onclick="switchTab('task')">TASKS</button>
+            <button class="tab-btn" onclick="switchTab('log')">LOG</button>
+            <button class="tab-btn" onclick="switchTab('kanban')">KANBAN</button>
+            <button class="tab-btn" onclick="switchTab('calendar')">CALENDÁRIO</button>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="app-content">
+            
+            <!-- ABA: TASKS -->
+            <section id="view-task" class="view-panel active">
+                <div class="filter-bar">
+                    <button class="filter-btn active" id="btn-sort-date" onclick="toggleSortDate()">Data: ↓ (Recente)</button>
+                    <button class="filter-btn" id="btn-sort-pri" onclick="togglePriority()">Prioridade Primeiro</button>
+                    <button class="filter-btn" id="btn-hide-done" onclick="toggleHideDone()">Ocultar Concluídas</button>
+                </div>
+                <div class="item-list" id="task-list"></div>
+            </section>
+
+            <!-- ABA: LOG -->
+            <section id="view-log" class="view-panel">
+                <h2 class="cms-heading" style="margin-bottom: 1rem;">Registro Histórico</h2>
+                <div class="item-list" id="log-list"></div>
+            </section>
+
+            <!-- ABA: KANBAN -->
+            <section id="view-kanban" class="view-panel">
+                <div class="kanban-board">
+                    <!-- A FAZER -->
+                    <div class="kanban-col" data-status="todo" ondragover="allowDrop(event)" ondrop="drop(event)">
+                        <div class="kanban-col-title">A Fazer</div>
+                        <div class="kanban-items" id="kb-todo"></div>
+                    </div>
+                    <!-- EM ANDAMENTO -->
+                    <div class="kanban-col" data-status="doing" ondragover="allowDrop(event)" ondrop="drop(event)">
+                        <div class="kanban-col-title">Em Andamento</div>
+                        <div class="kanban-items" id="kb-doing"></div>
+                    </div>
+                    <!-- CONCLUÍDO -->
+                    <div class="kanban-col" data-status="done" ondragover="allowDrop(event)" ondrop="drop(event)">
+                        <div class="kanban-col-title">Concluído</div>
+                        <div class="kanban-items" id="kb-done"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ABA: CALENDÁRIO -->
+            <section id="view-calendar" class="view-panel">
+                <div class="calendar-header">
+                    <button onclick="changeMonth(-1)" style="font-size: 1.5rem; font-weight: bold;">&lsaquo;</button>
+                    <h2 class="cms-heading" id="cal-month-title">MAIO 2026</h2>
+                    <button onclick="changeMonth(1)" style="font-size: 1.5rem; font-weight: bold;">&rsaquo;</button>
+                </div>
+                <div class="calendar-grid" id="calendar-grid">
+                    <!-- Dias gerados via JS -->
+                </div>
+            </section>
+
+        </div>
+
+        <!-- FAB (Floating Action Button) -->
+        <button class="fab" onclick="openModal()">+</button>
+
+        <!-- MODAL ADICIONAR / EDITAR -->
+        <div class="modal-overlay" id="modal">
+            <div class="modal-box">
+                <h2 class="cms-heading" id="modal-title">Novo Registro</h2>
+                
+                <input type="hidden" id="entry-id">
+                
+                <div class="form-group">
+                    <label>Tipo</label>
+                    <select id="entry-type" class="form-control" onchange="toggleFormFields()">
+                        <option value="task">Task (Atividade)</option>
+                        <option value="log">Log (Registro Histórico)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Descrição</label>
+                    <textarea id="entry-text" class="form-control" placeholder="O que precisa ser feito ou registrado?"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Data</label>
+                    <input type="date" id="entry-date" class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label>Categoria (Opcional)</label>
+                    <input type="text" id="entry-cat" class="form-control" placeholder="Ex: Reunião, Documento...">
+                </div>
+
+                <div class="form-group" id="group-priority">
+                    <label>Prioridade</label>
+                    <select id="entry-pri" class="form-control">
+                        <option value="Normal">Normal</option>
+                        <option value="Alta">Alta</option>
+                    </select>
+                </div>
+
+                <div class="form-group" id="group-status">
+                    <label>Status</label>
+                    <select id="entry-status" class="form-control">
+                        <option value="todo">A Fazer</option>
+                        <option value="doing">Em Andamento</option>
+                        <option value="done">Concluído</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+                    <button class="btn-primary" onclick="saveEntry()">Salvar</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* ==========================================================================
+           1. CONFIGURAÇÃO DA ARQUITETURA HÍBRIDA (PWA + GAS)
+           ========================================================================== */
+        // ATENÇÃO: Cole aqui a URL do Web App gerada no Google Apps Script
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwg5uCNK01CnEUhLLd_v26VNdQt3-ht6Hk86cZmhInxDaG5Y4mgWQlBMMiw-Bco_LXQdQ/exec";
+        
+        /* ==========================================================================
+           2. ESTADO DA APLICAÇÃO (CACHE LOCAL & OFFLINE-FIRST)
+           ========================================================================== */
+        let db = JSON.parse(localStorage.getItem('cms_db')) || [];
+        let localVersion = parseInt(localStorage.getItem('cms_version')) || 0;
+        let syncQueue = JSON.parse(localStorage.getItem('cms_sync_queue')) || [];
+
+        // Filtros Ativos e Calendário
+        let filterSortDesc = true;
+        let filterPriorityFirst = false;
+        let filterHideDone = false;
+
+        let currentDate = new Date();
+        let currentMonth = currentDate.getMonth();
+        let currentYear = currentDate.getFullYear();
+
+        /* ==========================================================================
+           3. LÓGICA DE INICIALIZAÇÃO E SINCRONIZAÇÃO EM BACKGROUND
+           ========================================================================== */
+        window.onload = () => {
+            document.getElementById('entry-date').valueAsDate = new Date();
+            
+            // Passo 1: Renderiza Imediatamente os dados do localStorage (0ms load time)
+            renderAll(); 
+            
+            // Passo 2: Dispara a Sincronização Silenciosa em background
+            if(SCRIPT_URL !== "COLE_SUA_URL_DO_APPS_SCRIPT_AQUI") {
+                syncWithServer();
+                setInterval(syncWithServer, 30000); // Polling leve a cada 30s
+            } else {
+                updateUIStatus('warning', 'Aguardando SCRIPT_URL');
+            }
+        };
+
+        function persistLocal() {
+            localStorage.setItem('cms_db', JSON.stringify(db));
+            localStorage.setItem('cms_sync_queue', JSON.stringify(syncQueue));
+            localStorage.setItem('cms_version', localVersion.toString());
+        }
+
+        function updateUIStatus(state, msg = '') {
+            const dot = document.getElementById('sync-dot');
+            const txt = document.getElementById('sync-text');
+            if(state === 'syncing') { dot.style.background = 'var(--cms-amarelo)'; txt.innerText = 'Sincronizando...'; txt.style.color = 'var(--cms-ink)'; }
+            else if(state === 'online') { dot.style.background = 'var(--cms-verde)'; txt.innerText = 'Online / Atualizado'; txt.style.color = 'var(--cms-verde)';}
+            else if(state === 'offline') { dot.style.background = '#dc2626'; txt.innerText = 'Offline (Pendências: '+syncQueue.length+')'; txt.style.color = '#dc2626'; }
+            else if(state === 'warning') { dot.style.background = '#dc2626'; txt.innerText = msg; txt.style.color = '#dc2626'; }
+        }
+
+        async function syncWithServer() {
+            if (!navigator.onLine) {
+                updateUIStatus('offline');
+                return;
+            }
+
+            updateUIStatus('syncing');
+
+            try {
+                // Se temos alterações locais para enviar (Fila/Queue)
+                if (syncQueue.length > 0) {
+                    const response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'sync', items: syncQueue })
+                    });
+                    
+                    const resData = await response.json();
+                    
+                    if(resData.status === 'success') {
+                        syncQueue = []; // Limpa a fila
+                        localVersion = resData.version;
+                        if(resData.data) db = resData.data; // Atualiza com o server se vier na resposta
+                        persistLocal();
+                        renderAll();
+                    }
+                } 
+                // Se a fila tá vazia, apenas baixa o Cache JSON super-rápido (Nível 1)
+                else {
+                    const response = await fetch(SCRIPT_URL);
+                    const resData = await response.json();
+                    
+                    if(resData.version > localVersion) {
+                        db = resData.data;
+                        localVersion = resData.version;
+                        persistLocal();
+                        renderAll();
+                    }
+                }
+                updateUIStatus('online');
+
+            } catch (error) {
+                console.error("Erro na sincronização:", error);
+                updateUIStatus('offline');
+            }
+        }
+
+        /* ==========================================================================
+           4. AÇÕES DO USUÁRIO (OPTIMISTIC UI - CRUD)
+           ========================================================================== */
+        
+        function saveEntry() {
+            const idInput = document.getElementById('entry-id').value;
+            const text = document.getElementById('entry-text').value.trim();
+            if(!text) return alert('A descrição é obrigatória!');
+
+            // IDs Temporários Baseados em Timestamp permitem que a UI crie itens offline seguros
+            const isNew = !idInput;
+            const entryId = isNew ? Date.now() : parseInt(idInput); 
+
+            const entryData = {
+                id: entryId,
+                type: document.getElementById('entry-type').value,
+                text: text,
+                date: document.getElementById('entry-date').value,
+                category: document.getElementById('entry-cat').value.trim(),
+                priority: document.getElementById('entry-pri').value,
+                status: document.getElementById('entry-status').value
+            };
+
+            // Atualiza Local Database Imediatamente (Optimistic UI)
+            if (isNew) {
+                db.push(entryData);
+            } else {
+                const index = db.findIndex(i => i.id == entryId);
+                db[index] = { ...db[index], ...entryData };
+            }
+
+            // Enfileira a ação para o Backend
+            const syncIndex = syncQueue.findIndex(i => i.id == entryId);
+            if(syncIndex >= 0) syncQueue[syncIndex] = entryData;
+            else syncQueue.push(entryData);
+
+            persistLocal();
+            closeModal();
+            renderAll();
+            syncWithServer(); // Tenta resolver em background
+        }
+
+        function deleteEntry(id) {
+            if(confirm("Tem certeza que deseja excluir este registro?")) {
+                // Remove localmente
+                db = db.filter(i => i.id !== id);
+                
+                // Comunica deleção ao servidor na fila
+                syncQueue.push({ id: id, deleted: true });
+                
+                persistLocal();
+                renderAll();
+                syncWithServer();
+            }
+        }
+
+        function updateStatus(id, newStatus) {
+            const item = db.find(i => i.id === id);
+            if(item) {
+                item.status = newStatus;
+                
+                const syncIndex = syncQueue.findIndex(i => i.id == id);
+                if(syncIndex >= 0) syncQueue[syncIndex].status = newStatus;
+                else syncQueue.push(item);
+                
+                persistLocal();
+                renderAll();
+                syncWithServer();
+            }
+        }
+
+        /* ==========================================================================
+           5. NAVEGAÇÃO E MODAIS (UX/UI Controls)
+           ========================================================================== */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.view-panel').forEach(panel => panel.classList.remove('active'));
+            document.getElementById('view-' + tabId).classList.add('active');
+            renderAll();
+        }
+
+        function toggleFormFields() {
+            const isTask = document.getElementById('entry-type').value === 'task';
+            document.getElementById('group-priority').style.display = isTask ? 'flex' : 'none';
+            document.getElementById('group-status').style.display = isTask ? 'flex' : 'none';
+        }
+
+        function openModal() {
+            document.getElementById('modal-title').innerText = "Novo Registro";
+            document.getElementById('entry-id').value = '';
+            document.getElementById('entry-text').value = '';
+            document.getElementById('entry-cat').value = '';
+            if(!document.getElementById('entry-date').value) document.getElementById('entry-date').valueAsDate = new Date(); 
+            
+            toggleFormFields();
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
+
+        function editEntry(id) {
+            const item = db.find(i => i.id === id);
+            if(!item) return;
+
+            document.getElementById('modal-title').innerText = "Editar Registro";
+            document.getElementById('entry-id').value = item.id;
+            document.getElementById('entry-type').value = item.type;
+            document.getElementById('entry-text').value = item.text;
+            document.getElementById('entry-date').value = item.date;
+            document.getElementById('entry-cat').value = item.category || '';
+            document.getElementById('entry-pri').value = item.priority || 'Normal';
+            document.getElementById('entry-status').value = item.status || 'todo';
+            
+            toggleFormFields();
+            document.getElementById('modal').classList.add('active');
+        }
+
+        function drag(ev, id) { ev.dataTransfer.setData("text", id); }
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drop(ev) {
+            ev.preventDefault();
+            const id = parseInt(ev.dataTransfer.getData("text"));
+            let targetCol = ev.target;
+            while(targetCol && !targetCol.classList.contains('kanban-col')) { targetCol = targetCol.parentNode; }
+            if(targetCol) { updateStatus(id, targetCol.getAttribute('data-status')); }
+        }
+
+        function toggleSortDate() {
+            filterSortDesc = !filterSortDesc;
+            const btn = document.getElementById('btn-sort-date');
+            btn.innerHTML = filterSortDesc ? 'Data: ↓ (Recente)' : 'Data: ↑ (Antiga)';
+            renderAll();
+        }
+
+        function togglePriority() {
+            filterPriorityFirst = !filterPriorityFirst;
+            document.getElementById('btn-sort-pri').classList.toggle('active');
+            renderAll();
+        }
+
+        function toggleHideDone() {
+            filterHideDone = !filterHideDone;
+            document.getElementById('btn-hide-done').classList.toggle('active');
+            renderAll();
+        }
+
+        function changeMonth(dir) {
+            currentMonth += dir;
+            if(currentMonth > 11) { currentMonth = 0; currentYear++; }
+            if(currentMonth < 0) { currentMonth = 11; currentYear--; }
+            renderCalendar();
+        }
+
+
+        /* ==========================================================================
+           6. RENDERIZAÇÃO DOM (APENAS LEITURA DE MEMÓRIA)
+           ========================================================================== */
+        function formatDateBr(dateString) {
+            if(!dateString) return '';
+            // Se contiver 'T', tira a parte do tempo para padronizar
+            const onlyDate = dateString.split('T')[0];
+            const [y, m, d] = onlyDate.split('-');
+            if(!y || !m || !d) return dateString;
+            return `${d}/${m}/${y}`;
+        }
+
+        function renderAll() {
+            renderTasks();
+            renderLogs();
+            renderKanban();
+            renderCalendar();
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('task-list');
+            container.innerHTML = '';
+            
+            let tasks = db.filter(item => item.type === 'task');
+            if(filterHideDone) tasks = tasks.filter(t => t.status !== 'done');
+
+            tasks.sort((a, b) => {
+                if (filterPriorityFirst) {
+                    if (a.priority === 'Alta' && b.priority !== 'Alta') return -1;
+                    if (a.priority !== 'Alta' && b.priority === 'Alta') return 1;
+                }
+                const dateA = new Date(a.date).getTime();
+                const dateB = new Date(b.date).getTime();
+                return filterSortDesc ? dateB - dateA : dateA - dateB;
+            });
+
+            tasks.forEach(t => {
+                const item = document.createElement('div');
+                item.className = `list-item ${t.priority === 'Alta' ? 'priority-alta' : ''} ${t.status === 'done' ? 'status-done' : ''}`;
+                
+                let badges = '';
+                if(t.category) badges += `<span class="badge badge-cat">${t.category}</span>`;
+                if(t.priority === 'Alta') badges += `<span class="badge badge-pri">PRIORIDADE ALTA</span>`;
+
+                item.innerHTML = `
+                    <div class="item-header">
+                        <span class="item-date">${formatDateBr(t.date)}</span>
+                        <div class="badges">${badges}</div>
+                    </div>
+                    <div class="item-text">${t.text}</div>
+                    <div class="item-actions">
+                        ${t.status !== 'done' ? `<button onclick="updateStatus(${t.id}, 'done')">✔ Concluir</button>` : `<button onclick="updateStatus(${t.id}, 'todo')">Reabrir</button>`}
+                        <button onclick="editEntry(${t.id})">Editar</button>
+                        <button class="btn-del" onclick="deleteEntry(${t.id})">Excluir</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function renderLogs() {
+            const container = document.getElementById('log-list');
+            container.innerHTML = '';
+            
+            let logs = db.filter(item => item.type === 'log').sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            logs.forEach(l => {
+                const item = document.createElement('div');
+                item.className = `list-item type-log`;
+                let badges = l.category ? `<span class="badge badge-cat">${l.category}</span>` : '';
+                item.innerHTML = `
+                    <div class="item-header">
+                        <span class="item-date">${formatDateBr(l.date)}</span>
+                        <div class="badges">${badges}</div>
+                    </div>
+                    <div class="item-text">${l.text}</div>
+                    <div class="item-actions">
+                        <button onclick="editEntry(${l.id})">Editar</button>
+                        <button class="btn-del" onclick="deleteEntry(${l.id})">Excluir</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function renderKanban() {
+            const cols = { 'todo': document.getElementById('kb-todo'), 'doing': document.getElementById('kb-doing'), 'done': document.getElementById('kb-done') };
+            Object.values(cols).forEach(col => col.innerHTML = '');
+
+            let tasks = db.filter(item => item.type === 'task').sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            tasks.forEach(t => {
+                if(!cols[t.status]) t.status = 'todo';
+                const card = document.createElement('div');
+                card.className = 'kanban-card';
+                card.draggable = true;
+                card.ondragstart = (e) => drag(e, t.id);
+                let badges = t.priority === 'Alta' ? `<span class="badge badge-pri" style="margin-bottom:5px; display:inline-block;">Alta</span>` : '';
+                let mobileNav = `<div class="kanban-mobile-controls">`;
+                if(t.status === 'doing' || t.status === 'done') mobileNav += `<button onclick="updateStatus(${t.id}, '${t.status === 'done' ? 'doing' : 'todo'}')">&lsaquo;</button>`; else mobileNav += `<div></div>`;
+                if(t.status === 'todo' || t.status === 'doing') mobileNav += `<button onclick="updateStatus(${t.id}, '${t.status === 'todo' ? 'doing' : 'done'}')">&rsaquo;</button>`; else mobileNav += `<div></div>`;
+                mobileNav += `</div>`;
+
+                card.innerHTML = `${badges}<div class="kanban-card-text">${t.text}</div><div style="font-size:10px; color:var(--cms-ink); opacity:0.5;">${formatDateBr(t.date)}</div>${mobileNav}`;
+                cols[t.status].appendChild(card);
+            });
+        }
+
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            const title = document.getElementById('cal-month-title');
+            grid.innerHTML = '';
+            
+            const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+            title.innerText = `${monthNames[currentMonth]} ${currentYear}`;
+
+            ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"].forEach(day => {
+                const el = document.createElement('div'); el.className = 'cal-day-name'; el.innerText = day; grid.appendChild(el);
+            });
+
+            const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+            for(let i = 0; i < firstDay; i++) {
+                const empty = document.createElement('div'); empty.className = 'cal-cell empty'; grid.appendChild(empty);
+            }
+
+            for(let day = 1; day <= daysInMonth; day++) {
+                const cell = document.createElement('div'); cell.className = 'cal-cell';
+                const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                
+                // Ignora timestamps longos da busca, pegando só YYYY-MM-DD
+                const dayItems = db.filter(item => item.date && item.date.startsWith(dateString));
+                
+                let indicatorsHTML = '';
+                dayItems.forEach(item => {
+                    const truncText = item.text.length > 15 ? item.text.substring(0,15) + '...' : item.text;
+                    indicatorsHTML += `<div class="cal-dot t-${item.type}">${truncText}</div>`;
+                });
+
+                cell.innerHTML = `<div class="cal-date">${day}</div><div class="cal-indicators">${indicatorsHTML}</div>`;
+                grid.appendChild(cell);
+            }
+        }
+    </script>
+</body>
+</html>
